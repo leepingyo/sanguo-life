@@ -571,4 +571,8 @@ const ROUTE_V2_DECREES=decreeTargets;window.decreeTargets=function(kind){if(kind
 
 // 只讓刺客出師與帝王本紀看見錦衣局入口。
 function initialJinyiSetup(){s.jinyi??=null;}
+
+// 在十三歲當年優先完成主線選擇；若同年已有一般事件，先暫存，待路線與門派選完再接續。
+const ROUTE_V2_ANNUAL_PRIORITY=window.annual;window.annual=function(){ROUTE_V2_ANNUAL_PRIORITY();if(!s||s.done||s.age<13||s.routeChosen||s.routeMode)return;if(s.pending?.options?.some(o=>o.selectRoute))return;if(s.pending){s.deferredRouteEvent=s.pending;s.pending=null;}routePicker();render();save();};
+const ROUTE_V2_CHOOSE_DEFERRED=window.choose;window.choose=function(i){const option=s?.pending?.options?.[i],routeChoice=!!option?.selectRoute,sectChoice=!!option?.assassinSect;ROUTE_V2_CHOOSE_DEFERRED(i);if(!s||s.pending||s.done||!s.deferredRouteEvent)return;if(routeChoice&&option.selectRoute==='assassin')return;if(routeChoice||sectChoice){s.pending=s.deferredRouteEvent;delete s.deferredRouteEvent;render();save();}};
 </script></body></html>
