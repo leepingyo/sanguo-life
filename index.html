@@ -575,4 +575,190 @@ function initialJinyiSetup(){s.jinyi??=null;}
 // 在十三歲當年優先完成主線選擇；若同年已有一般事件，先暫存，待路線與門派選完再接續。
 const ROUTE_V2_ANNUAL_PRIORITY=window.annual;window.annual=function(){ROUTE_V2_ANNUAL_PRIORITY();if(!s||s.done||s.age<13||s.routeChosen||s.routeMode)return;if(s.pending?.options?.some(o=>o.selectRoute))return;if(s.pending){s.deferredRouteEvent=s.pending;s.pending=null;}routePicker();render();save();};
 const ROUTE_V2_CHOOSE_DEFERRED=window.choose;window.choose=function(i){const option=s?.pending?.options?.[i],routeChoice=!!option?.selectRoute,sectChoice=!!option?.assassinSect;ROUTE_V2_CHOOSE_DEFERRED(i);if(!s||s.pending||s.done||!s.deferredRouteEvent)return;if(routeChoice&&option.selectRoute==='assassin')return;if(routeChoice||sectChoice){s.pending=s.deferredRouteEvent;delete s.deferredRouteEvent;render();save();}};
+</script><script>'use strict';
+// 題材資料層：保留既有人生引擎、存檔欄位與互動流程，只替換三國世界為金庸群俠的跨書卷架空江湖。
+const JY_BOOKS=[
+ {title:'天龍八部',year:1068,place:'北宋江湖'},
+ {title:'射鵰英雄傳',year:1190,place:'南宋金國'},
+ {title:'神鵰俠侶',year:1235,place:'襄陽風雲'},
+ {title:'倚天屠龍記',year:1350,place:'元末江湖'},
+ {title:'笑傲江湖',year:1500,place:'五嶽紛爭'},
+ {title:'鹿鼎記',year:1670,place:'清初風雲'}
+];
+
+homes.splice(0,homes.length,'南宋臨安','襄陽城','華山山麓','武當山下','江南太湖','西域商道','雁門關外','燕京城郊','大理古城','峨嵋山下');
+const jyFamilyText={
+ 農民:'家中耕種為生，熟悉山野水土與鄉里互助；你自幼體魄漸強，遇事也懂得照應鄰人。',
+ 貧民:'家中清寒，靠零工與鄰里接濟度日；你早早學會察言觀色，在艱難中仍保有闖蕩江湖的可能。',
+ 商人:'家中往來驛道與市集，販售藥材、茶葉或行旅用品；算籌、人脈與各地見聞是你的起點。',
+ 軍人:'家人曾在邊軍、鏢局或地方守備任事；你熟悉隊列、兵器與行旅規矩，武藝根基較佳。',
+ 世家大族:'家族世代讀書、習武並與地方名門往來；你自幼接觸禮法、家傳技藝與江湖人情。'
+};
+for(const f of FAMILIES)if(jyFamilyText[f.name])f.text=jyFamilyText[f.name];
+
+const jyProvinces=[
+ ['中原','洛陽','少林寺','嵩山','開封','汝州','中原古道','龍門石窟'],
+ ['江南','臨安','西湖','嘉興','桃花島','燕子塢','太湖水寨','曼陀山莊'],
+ ['山東','泰山','青州','蓬萊','沂州','泰山腳下'],
+ ['淮揚','揚州','金陵','秦淮河','淮安','長江渡口'],
+ ['河北','滄州','真定','保定','燕京','古北口','金國邊寨','趙州'],
+ ['燕雲','燕京','大都','山海關','關外草原','蒙古大營','長白山'],
+ ['太行','雁門關','五台山','恆山','太行山寨'],
+ ['西域','崑崙山','天山','回疆商道','龜茲','大雪山'],
+ ['終南','終南山','活死人墓','重陽宮','古道客棧','華山北麓'],
+ ['巴蜀','峨嵋山','成都','青城山','樂山','川西山道','劍閣','大渡河','錦城驛站'],
+ ['荊襄','襄陽','武當山','漢水渡口','歸雲莊','樊城','荊山古道','均州','光明頂驛道'],
+ ['江東','蘇州','太湖','君山','莫干山','吳越水路','姑蘇慕容舊居','金華'],
+ ['南海','神龍島','珠江口','佛山','海南渡口','南海商路'],
+ ['海島','舟山海路','桃花外島','台灣渡口','沿海鏢道','南海商路']
+];
+const jyProvinceNames=jyProvinces.map(x=>x[0]);
+const jyNeighborIndexes=[[1,2,4,8],[0,3,9,10,11],[0,4,6],[1,4,11,12],[0,2,3,5,6],[4,6],[4,5,7,8],[6,8,9],[0,6,7,9],[1,7,8,10],[1,3,9,11,12],[1,3,10,12],[3,10,11],[10,12]];
+PROVINCES.forEach((p,i)=>{const old=p.cities;p.name=jyProvinceNames[i]||('江湖地界'+(i+1));p.source='jianghu';p.neighbors=(jyNeighborIndexes[i]||[]).map(n=>jyProvinceNames[n]);p.note='依金庸小說常見地名組成的架空江湖地圖；行政分區與勢力歸屬為遊戲設定。';p.cities=old.map((c,j)=>[c[0],jyProvinces[i][j+1]||`${p.name}山莊${j+1}`,'江湖地界',c[3],p.note]);});
+for(const k of Object.keys(GEO_SOURCES))GEO_SOURCES[k]='https://zh.wikipedia.org/wiki/金庸作品';GEO_SOURCES.jianghu='https://zh.wikipedia.org/wiki/金庸作品';
+CITIES.splice(0,CITIES.length,...PROVINCES.flatMap(p=>p.cities.map(([id,name,county,defense,note=''])=>({id,name,county,province:p.name,defense,note,source:GEO_SOURCES.jianghu}))));
+for(const k of Object.keys(CITY_INDEX))delete CITY_INDEX[k];Object.assign(CITY_INDEX,Object.fromEntries(CITIES.map(c=>[c.id,c])));
+Object.assign(WORLD_FACTIONS,{han:'南宋朝廷',wei:'金國王府',shu:'襄陽義軍',wu:'蒙古汗廷',yuan:'明教',dong:'西域諸派',lu:'獨行俠客',yuanshu:'神龍教',liubiao:'華山派',liuzhang:'丐幫',zhanglu:'全真教',gongsun:'大理段氏',mateng:'西夏王府',shi:'海外俠島',jin:'清廷',local:'地方門派',player:'我方門派'});
+window.cityName=function(city){return city?.name||'江湖驛站'};
+window.baselineOwner=function(city){const n=city.province;if(n==='中原'||n==='江南'||n==='淮揚')return 'han';if(n==='河北'||n==='燕雲')return 'wei';if(n==='荊襄'||n==='巴蜀')return 'shu';if(n==='太行'||n==='西域')return 'wu';if(n==='江東'||n==='山東')return 'yuan';if(n==='終南')return 'zhanglu';return 'local';};
+homes.splice(0,homes.length,...['臨安','襄陽','華山','武當山','姑蘇','崑崙山','雁門關','燕京','大理','峨嵋山']);
+
+const jyCamps={
+ shu:{name:'襄陽義軍／郭靖黃蓉',place:'荊襄襄陽',court:999,end:1273,heirs:['郭靖','郭襄','耶律齊']},
+ wei:{name:'朝廷與金國王府',place:'河北燕京',court:999,end:1234,heirs:['完顏洪烈','完顏康','金國王府主事']},
+ wu:{name:'蒙古汗廷',place:'燕雲蒙古大營',court:999,end:1368,heirs:['成吉思汗','窩闊台','忽必烈']},
+ yuan:{name:'明教',place:'西域光明頂',court:999,end:999,heirs:['張無忌','楊逍','范遙']},
+ yuanshu:{name:'日月神教',place:'中原黑木崖',court:999,end:999,heirs:['任我行','東方不敗','任盈盈']},
+ liubiao:{name:'華山派／五嶽劍派',place:'終南華山',court:999,end:999,heirs:['岳不群','左冷禪','令狐沖']}
+};
+for(const [id,v] of Object.entries(jyCamps))Object.assign(CAMPS[id],v);
+Object.assign(CAMPS.han,{name:'南宋／清廷朝廷',place:'江南臨安',court:999,end:999,heirs:['宋廷主事','康熙','朝廷近侍']});
+window.campName=function(c){return c==='han'?'朝廷':CAMPS[c]?.name||'江湖同道'};
+window.leader=function(c){const rows=CAMPS[c]?.heirs||[];return rows.find(n=>!s?.slain?.includes(n))||rows[0]||'本地掌事'};
+window.campOf=function(f=s?.faction||''){if(f==='han'||/南宋|清廷|朝廷/.test(f))return 'han';for(const [id,row] of Object.entries(CAMPS))if(id!=='han'&&(f===row.name||f.includes(row.name.split(/[／／]/)[0])||row.heirs.some(n=>f.includes(n))))return id;if(/襄陽|郭靖|郭襄|丐幫/.test(f))return 'shu';if(/金國|完顏/.test(f))return 'wei';if(/蒙古|成吉思汗|忽必烈/.test(f))return 'wu';if(/明教|張無忌/.test(f))return 'yuan';if(/日月神教|東方不敗|任我行/.test(f))return 'yuanshu';if(/華山|五嶽|令狐沖|岳不群/.test(f))return 'liubiao';return 'none';};
+
+const jyPeople=[
+ ['喬峰',1060,1090,'西夏','wu','warrior','豪氣磊落、重諾守義；你在邊關相遇，他邀你共查一樁牽動身世的舊案。','《天龍八部》'],['段譽',1060,1090,'大理','wu','lord','談吐溫雅，對武學與世情都抱有好奇，邀你同遊江湖。','《天龍八部》'],['虛竹',1065,1100,'少林寺','liubiao','scholar','行事謙和，偶然顯露深厚內力，仍把功勞歸於機緣。','《天龍八部》'],['王語嫣',1065,1090,'姑蘇','liubiao','scholar','熟知各派武學典故，與你談論招式源流與江湖傳聞。','《天龍八部》'],['慕容復',1060,1090,'姑蘇','liubiao','lord','舉止矜貴，正廣交江湖人物；你能否看清他的志向，尚待相處。','《天龍八部》'],['阿朱',1065,1090,'雁門關','shu','scholar','機敏善解人意，在驛站替人解圍後與你同行一程。','《天龍八部》'],['鳩摩智',1060,1090,'西域','wu','warrior','談吐自負、博學多藝，提出與你切磋一門異域武學。','《天龍八部》'],
+ ['郭靖',1180,1235,'襄陽','shu','lord','性情敦厚而守信，正為襄陽軍民奔走，願聽你談安民與守城之策。','《射鵰英雄傳》《神鵰俠侶》'],['黃蓉',1185,1259,'襄陽','shu','scholar','聰慧機敏，幾句話便看出你處事的長短，邀你共商一件急務。','《射鵰英雄傳》《神鵰俠侶》'],['楊康',1180,1210,'燕京','wei','lord','身處金國王府與江湖身世之間，言行令你難辨其心。','《射鵰英雄傳》'],['穆念慈',1180,1220,'河北','shu','warrior','武藝端正、性情堅毅，正扶助旅途中受困的百姓。','《射鵰英雄傳》'],['黃藥師',1170,1235,'桃花島','liubiao','warrior','行事孤高、才藝廣博，忽然考問你對武林規矩的看法。','《射鵰英雄傳》'],['洪七公',1160,1220,'江南','shu','warrior','爽朗不羈，聞到佳餚便停步，也不忘考校年輕人的俠義心腸。','《射鵰英雄傳》'],['歐陽鋒',1160,1230,'西域','wu','warrior','西域高手來往中原，談笑間邀你辨識一套奇異步法。','《射鵰英雄傳》'],['丘處機',1150,1220,'終南','liubiao','scholar','全真門人重信守諾，與你談論修身、戒律與江湖責任。','《射鵰英雄傳》'],['成吉思汗',1150,1227,'蒙古大營','wu','lord','草原雄主正在召集各方人才；你可旁觀其軍政，也可婉拒招攬。','《射鵰英雄傳》'],
+ ['楊過',1220,1275,'終南','shu','lord','行事不拘一格，對世俗門規自有見解，邀你同行探訪舊友。','《神鵰俠侶》'],['小龍女',1220,1275,'古墓','liubiao','warrior','清冷寡言，出手俐落；你在終南山道遇見她練劍。','《神鵰俠侶》'],['郭襄',1240,1310,'襄陽','shu','warrior','好奇心強、仗義爽朗，正沿途探訪各派與襄陽故人。','《神鵰俠侶》《倚天屠龍記》'],['金輪法王',1220,1275,'西域','wu','warrior','蒙古國師以異域武學聞名，邀你觀摩一場門派論技。','《神鵰俠侶》'],['程英',1230,1290,'江南','shu','scholar','溫婉沉靜，精於琴棋與暗器，與你討論如何化解一場門派爭端。','《神鵰俠侶》'],['陸無雙',1230,1290,'江南','shu','warrior','性子爽利，正追查一件舊日恩怨，邀你幫忙尋訪線索。','《神鵰俠侶》'],
+ ['張無忌',1330,1390,'光明頂','yuan','lord','處事寬厚，身負明教重任，想聽各派對停戰與結盟的看法。','《倚天屠龍記》'],['趙敏',1335,1390,'大都','wei','lord','聰明果決，熟悉朝廷與江湖兩邊規矩，提出一場機鋒交鋒。','《倚天屠龍記》'],['周芷若',1335,1390,'峨嵋山','liubiao','warrior','峨嵋弟子謹守師門，談起屠龍刀與倚天劍時神色凝重。','《倚天屠龍記》'],['殷離',1335,1390,'江南','yuan','warrior','性情倔強，獨自追尋舊人與身世線索。','《倚天屠龍記》'],['小昭',1335,1390,'光明頂','yuan','scholar','聰敏細心，善於察覺各人言語間的保留。','《倚天屠龍記》'],['張三丰',1240,1360,'武當山','liubiao','scholar','武當宗師談吐平和，提醒你武學修為與待人心性同樣重要。','《倚天屠龍記》'],['謝遜',1320,1390,'冰火島','yuan','warrior','金毛獅王沉聲談起舊事與屠龍刀，引你思索仇怨的代價。','《倚天屠龍記》'],['楊逍',1320,1390,'光明頂','yuan','scholar','明教光明左使熟諳教中事務，請你評議一件門內爭執。','《倚天屠龍記》'],
+ ['令狐沖',1480,1530,'華山','liubiao','warrior','豪邁灑脫，愛酒也重情義，請你在一場門派紛爭中暫作公證。','《笑傲江湖》'],['任盈盈',1480,1530,'黑木崖','yuanshu','lord','聰慧而有主見，試探你對正邪門戶與個人恩義的看法。','《笑傲江湖》'],['岳不群',1460,1520,'華山','liubiao','lord','以君子之名廣納門徒，邀你加入華山派並接受考核。','《笑傲江湖》'],['寧中則',1460,1520,'華山','liubiao','待人端正，關心年輕弟子在門派風波中的安危。','《笑傲江湖》'],['左冷禪',1460,1520,'嵩山','liubiao','五嶽盟主正推動合派之議，邀你陳述各派利弊。','《笑傲江湖》'],['東方不敗',1470,1520,'黑木崖','yuanshu','日月神教權勢人物深居簡出，你只在一次密議中見到其身影。','《笑傲江湖》'],['任我行',1460,1520,'黑木崖','yuanshu','重掌神教後召集舊部，談論教中權柄與江湖盟約。','《笑傲江湖》'],
+ ['韋小寶',1650,1690,'揚州','han','lord','出身市井，機靈善應變，正奉差往返宮廷與江湖之間。','《鹿鼎記》'],['康熙',1650,1700,'北京','han','lord','年輕皇帝召見各方人士，詢問江湖門派與朝廷之間如何相安。','《鹿鼎記》'],['陳近南',1630,1690,'台灣','shu','scholar','天地會總舵主重義守信，邀你協助傳遞一封關係盟友安危的密信。','《鹿鼎記》'],['雙兒',1650,1690,'江南','shu','warrior','忠誠細心，護送同伴途經驛站，主動查看你的傷勢。','《鹿鼎記》'],['阿珂',1650,1690,'北京','wei','warrior','容貌出眾且心事難測，正被捲入宮廷與江湖的雙重糾葛。','《鹿鼎記》'],['建寧公主',1650,1690,'北京','han','lord','宮中公主任性好奇，對江湖人的行事方式很感興趣。','《鹿鼎記》'],['鰲拜',1620,1669,'北京','han','warrior','權臣正在清點朝中與禁衛力量，邀你接受一次近身侍衛考校。','《鹿鼎記》'],['洪安通',1620,1690,'神龍島','yuanshu','lord','神龍教主廣收門徒，教中戒律森嚴，任何承諾都須謹慎。','《鹿鼎記》']
+].map(([name,from,to,region,camp,kind,trait,ref])=>({name,from,to,region,camp,kind,trait,ref}));
+PEOPLE.splice(0,PEOPLE.length,...jyPeople);
+
+for(const k of Object.keys(events))delete events[k];
+Object.assign(events,{
+ 1068:['雁門舊案','北地邊關傳來一樁牽動遼宋與武林的舊案，江湖人開始追尋當年的真相。','《天龍八部》','雁門關'],
+ 1075:['聚賢莊風波','各路人物因舊怨聚集，聚賢莊的邀約使武林中人重新思量恩義與立場。','《天龍八部》','聚賢莊'],
+ 1080:['少林寺英雄會','少林寺召集武林同道查明江湖傳聞；你可協助調停，也可專注自家門派。','《天龍八部》','少林'],
+ 1190:['江南群俠會','南宋、金國與草原勢力交會，江南各派議論守土、行俠與個人恩仇。','《射鵰英雄傳》','群俠'],
+ 1200:['華山論劍','各派高手齊聚華山論武，江湖名聲與武學傳承再度成為眾人焦點。','《射鵰英雄傳》','華山論劍'],
+ 1219:['草原遠征','蒙古軍威遠播，邊地商路與百姓生計受到影響；各方都在衡量下一步。','《射鵰英雄傳》','蒙古'],
+ 1235:['古墓重逢','終南山一帶傳出古墓派與全真門人的消息，年輕俠士開始踏入新的恩怨。','《神鵰俠侶》','古墓'],
+ 1259:['襄陽告急','襄陽守城軍民需要藥材、糧草與援手；江湖人物各以自己的方式相助。','《神鵰俠侶》','襄陽'],
+ 1273:['襄陽風雲','襄陽戰局牽動無數人的去留。你可以守護百姓、護送家眷，或設法保存門派傳承。','《神鵰俠侶》','襄陽'],
+ 1350:['明教舉事','元末地方動盪，明教與各地義軍尋找盟友；你面對的是信念、民生與江湖規矩。','《倚天屠龍記》','明教'],
+ 1356:['光明頂議盟','各派對明教的成見與新盟約同時浮現，少林、武當與峨嵋的態度各不相同。','《倚天屠龍記》','光明頂'],
+ 1360:['六大派下山','六大派行動引起江湖震盪，你可調停衝突、保護同門，或尋找事件背後的線索。','《倚天屠龍記》','六大派'],
+ 1368:['新朝初立','元末戰亂漸歇，新朝秩序初定。昔日義軍、門派與百姓都要尋找新的相處方式。','《倚天屠龍記》','新朝'],
+ 1500:['五嶽並派之議','五嶽劍派就盟主與合派展開爭論，門中聲望、師徒情分與武林規矩彼此牽連。','《笑傲江湖》','五嶽'],
+ 1508:['華山門中風波','華山派內部傳出武學與師承爭議，各派探問真相，你可能被邀作證或調停。','《笑傲江湖》','華山'],
+ 1515:['黑木崖易主','日月神教權力更迭的消息傳入中原，江湖人物各自判斷應否介入。','《笑傲江湖》','黑木崖'],
+ 1670:['天地會密約','清初朝廷與反清復明組織暗中角力，市井出身的俠客也可能左右局勢。','《鹿鼎記》','天地會'],
+ 1673:['三藩風起','地方藩王起兵，朝廷、天地會與江湖門派各有盤算，百姓又將承受戰事。','《鹿鼎記》','清初'],
+ 1680:['神龍島風波','神龍教與朝廷、天地會的人事糾葛浮上檯面，一封密信足以改變各方信任。','《鹿鼎記》','神龍教']
+});
+
+for(const key of Object.keys(ROUTES))delete ROUTES[key];
+Object.assign(ROUTES,{
+ shu:{1190:['襄陽招賢','郭靖與黃蓉招募有志之士協助守城與安民。你可參與籌糧、護送或武林聯絡。','《射鵰英雄傳》'],1235:['神鵰俠侶','楊過與小龍女的行蹤傳入襄陽，郭靖一家協調各派支援。','《神鵰俠侶》'],1259:['襄陽守備','襄陽城外局勢緊迫，你在守城、疏散百姓與保存門派典籍間安排人手。','《神鵰俠侶》'],1273:['守城之責','守城與護民成為首務；無論江湖名聲如何，百姓安危都在眼前。','《神鵰俠侶》']},
+ wei:{1190:['金國王府','金國王府招募幕僚與護衛，朝廷差遣與江湖恩怨時常交錯。','《射鵰英雄傳》'],1234:['金國覆亡','金國勢力瓦解，舊部各尋出路；你可以辭職歸隱，或護送無辜之人離開。','《射鵰英雄傳》'],1350:['大都密議','朝廷與江湖勢力互探底細，你可在差事、密報與個人信義間作決定。','《倚天屠龍記》'],1670:['御前任事','宮中召集侍衛與近臣處理急務，你的選擇將影響朝廷和江湖的互信。','《鹿鼎記》']},
+ wu:{1190:['草原汗廷','草原勢力擴張，軍中與商道都需要熟悉中原情勢的人才。','《射鵰英雄傳》'],1219:['西征消息','遠征改變商路與部族關係，你可傳遞和議、安置百姓或留在軍中。','《射鵰英雄傳》'],1259:['汗廷議南','蒙古大軍圍繞襄陽部署，將領、使者與地方人物各有不同主張。','《神鵰俠侶》'],1350:['元廷風波','元末各地起事，朝廷召集人才維持秩序，你可選擇忠於任職之地或另尋出路。','《倚天屠龍記》']},
+ yuan:{1350:['明教延攬','明教廣納各地志士，教中重整堂口並與地方義軍協議。','《倚天屠龍記》'],1356:['光明頂盟議','各派代表登上光明頂，信任與成見交纏。你能否促成停戰，取決於過往行事。','《倚天屠龍記》'],1360:['護送同道','各派下山行動引起衝突，你受命保護同道與沿途百姓。','《倚天屠龍記》'],1368:['新朝後的江湖','朝代更替後，明教與地方門派重新安排彼此關係。','《倚天屠龍記》']},
+ yuanshu:{1500:['黑木崖召見','日月神教召集堂主與護法，教中權力更迭使每個人都需表明去留。','《笑傲江湖》'],1508:['五嶽爭端','五嶽劍派的盟約牽動日月神教各堂口，你受命探明各方真正意圖。','《笑傲江湖》'],1515:['教主更替','教主之位易手，舊部與新任人物重新協商規矩。','《笑傲江湖》']},
+ liubiao:{1500:['華山弟子','華山派重訂門規與傳承次序，你要在同門情義和自身見解間取捨。','《笑傲江湖》'],1508:['五嶽會盟','五嶽劍派會盟商討合派，你的投票或進言可能改變門派格局。','《笑傲江湖》'],1670:['清廷與天地會','江湖門派被捲入朝廷與天地會的衝突，保護同門或避免牽連百姓成為難題。','《鹿鼎記》']},
+ han:{1670:['宮廷與市井','宮廷急務落在近侍與往來人物身上；市井機敏有時比官階更能化解危局。','《鹿鼎記》']}
+});
+
+PLAYER_ROUTE_META.rebellion=['自立門派／武林盟主','延攬群豪、拓展地盤、立下盟約並守護一方'];
+PLAYER_ROUTE_META.eunuch=['內廷近侍','御前差事、宮廷人脈與護衛職務'];
+PLAYER_ROUTE_META.scholar=['謀士／掌門文職','門派舉薦、武林評議與謀略考核'];
+PLAYER_ROUTE_META.warrior=['俠客／武將','拜師習武、護送護民、江湖名望與門派晉階'];
+PLAYER_ROUTE_META.merchant=['行商','藥材鏢局、茶馬商路、行會與資產經營'];
+PLAYER_ROUTE_META.assassin=['刺客','門派修習、刺探消息、護送與高風險委託'];
+STAGES.splice(0,STAGES.length,'','建立據點','延攬群豪','自立為盟','掌領武林');
+IMPERIAL_COUNTRIES.splice(0,IMPERIAL_COUNTRIES.length,['宋','南宋朝廷'],['金','金國王府'],['蒙古','蒙古汗廷'],['明教','明教義軍'],['天地會','天地會（架空盟號）'],['新盟','新盟（原創旗號）']);
+IMPERIAL_ERAS.splice(0,IMPERIAL_ERAS.length,...JY_BOOKS.map(b=>[b.title,b.place]));
+IMPERIAL_ERAS.push(['江湖元年','原創江湖紀年'],['盟約年','群雄共議紀年'],['承平年','地方安定紀年']);
+JINYI_CAMPS.splice(0,JINYI_CAMPS.length,['wei','朝廷御前司'],['shu','襄陽義軍護衛'],['wu','蒙古汗廷侍衛'],['yuan','明教護法堂'],['yuanshu','日月神教密堂']);
+JINYI_OFFICES.splice(0,JINYI_OFFICES.length,'總管','副總管','掌令','護法','堂主','香主','旗主','執事','親衛','門下校尉');
+ASSASSIN_SECTS.forEach((x,i)=>{x.style=[
+ '武當門人以沉靜守正、內外兼修為訓練方向，參照金庸武俠世界對武當一脈的原創概述。',
+ '峨嵋門人重視劍術、門規與同門責任，參照金庸武俠世界的峨嵋派設定。',
+ '華山門人研習劍法與門內傳承，並須面對師承、名望與同門歧見。',
+ '泰山門人遵循五嶽門規，以長劍、身法和師門考校累積本領。'
+ ][i]||x.style;});
+
+EUNUCH_OFFICES.splice(0,EUNUCH_OFFICES.length,['內廷學徒','熟悉宮中禮制、文移與日常差遣'],['帶刀侍衛','護衛宮門、隨行巡查與傳召'],['御前執事','協理御前事務並核對詔令'],['內廷掌事','管理一處宮門、庫房或值宿班次'],['近侍副統領','協調侍衛與內廷往來'],['近侍總管','主管宮中差遣與人事'],['御前掌令','承辦機密文書並按旨傳達'],['內廷統領','統攝御前近侍與禁衛值守']);
+PALACE_DATA.title='武俠小說中的宮廷近侍與御前侍衛';PALACE_DATA.note='此為沿用原有內廷職涯機制的架空近侍職級，不把明代宦官制度移植到金庸小說世界。';PALACE_DATA.source='https://zh.wikipedia.org/wiki/金庸作品';
+OFFICE_DATA.source='https://zh.wikipedia.org/wiki/金庸作品';OFFICE_DATA.edition='金庸武俠作品角色、門派與職分的遊戲改編';OFFICE_DATA.chapters=0;OFFICE_DATA.note='本庫將小說中常見門派與職分整理為遊戲職階，內容為原創摘要，不引用小說原文，也不宣稱各書人物同時代。';
+OFFICE_DATA.offices.splice(0,OFFICE_DATA.offices.length,...[
+ ['丐幫幫主','江湖領袖',4],['武林盟主','江湖領袖',4],['掌門','門派職分',4],['副掌門','門派職分',3],['總舵主','門派職分',4],['長老','門派職分',3],['護法','門派職分',3],['堂主','門派職分',2],['香主','門派職分',1],['舵主','門派職分',2],['旗主','門派職分',2],['首座','門派職分',3],['峰主','門派職分',3],['教主','門派職分',4],['光明左使','門派職分',3],['光明右使','門派職分',3],['散人','江湖身份',2],['壇主','門派職分',2],['掌棒龍頭','門派職分',3],['掌鉢龍頭','門派職分',3],
+ ['御前侍衛統領','宮廷職分',4],['侍衛副統領','宮廷職分',3],['御前侍衛','宮廷職分',2],['帶刀侍衛','宮廷職分',1],['內廷總管','宮廷職分',3],['宮門校尉','宮廷職分',1],['樞密使','朝廷職分',4],['樞密副使','朝廷職分',3],['知府','地方職分',2],['總兵','武職',3],['將軍','武職',3],['副將','武職',2],['都統','武職',3],['巡檢','地方職分',1],
+ ['大俠','江湖名望',4],['俠客','江湖身份',2],['少俠','江湖身份',1],['隱士','江湖身份',2],['鏢頭','行旅職分',2],['鏢師','行旅職分',1],['名醫','江湖職分',3],['神醫','江湖職分',4],['鑄劍師','江湖職分',3],['藥師','江湖職分',2],['說書人','江湖職分',1],['密探','特殊職分',2],['盟中議事','江湖職分',2],['皇帝','君位',4],['王爺','爵位',3],['公主駙馬','皇親職分',2]
+ ].map((x,i)=>{const name=x[0],category=['丞相','太尉','司徒','尚書令','樞密使','樞密副使','內廷總管','盟中議事'].includes(name)?'中央文官':['知府','巡檢'].includes(name)?'地方官':['皇帝','王爺','公主駙馬'].includes(name)?'爵位與君位':['御前侍衛統領','侍衛副統領','御前侍衛','帶刀侍衛','宮門校尉','總兵','將軍','副將','都統','大將軍','征東將軍'].includes(name)?'武官':'武官';return {id:'jianghu-office-'+i,name,category,tier:x[2],camps:['shu','wei','wu','yuan','yuanshu','liubiao'],playable:!['江湖名望','江湖身份','爵位','君位'].includes(x[1]),refs:[],evidence:{chapter:0,context:'依金庸武俠作品中的門派、江湖與朝廷職分作原創遊戲整理。'}};}));
+for(const row of SELECTION_DATA.systems)row.basis='以門派舉薦、師門聲望、武學修習與行俠紀錄綜合評議；此為架空遊戲規則。';
+SELECTION_DATA.title='門派舉薦與武林評議';SELECTION_DATA.source='https://zh.wikipedia.org/wiki/金庸作品';SELECTION_DATA.note='保留原有資格、評議與年度考核引擎，改以門派舉薦、武學見聞與江湖聲望呈現，不沿用漢代察舉或曹魏九品制度。';
+NINE_RANK_DATA.name='武林九等品評';NINE_RANK_DATA.introduced='架空設定';NINE_RANK_DATA.proposer='各派評議人';NINE_RANK_DATA.historicalScope='金庸小說題材改編';NINE_RANK_DATA.sources=[{title:'金庸作品概覽',url:'https://zh.wikipedia.org/wiki/金庸作品',passage:'各書分屬不同時代與江湖脈絡，本遊戲將其改編為選擇式人生故事。'}];NINE_RANK_DATA.notes=['九等只代表本局門派評議，與人物品格無關。','門派評議、師門推薦與三年考核為沿用原引擎的架空規則。'];
+ROYAL_TITLE_DATA.splice(0,ROYAL_TITLE_DATA.length,...[
+ {id:'盟主',title:'武林盟主',story:'各派推舉你主持盟約，承擔調停門戶紛爭與保護百姓的責任。',source:'https://zh.wikipedia.org/wiki/金庸作品',book:'江湖原創支線',effect:{support:3,legitimacy:5}},
+ {id:'天下盟',title:'天下盟主',story:'你整合多方門派與義軍，需以盟約取得信任；名號並不等於眾人真心歸附。',source:'https://zh.wikipedia.org/wiki/金庸作品',book:'江湖原創支線',effect:{troops:60,pressure:8}},
+ {id:'護國',title:'護國大俠',story:'你以守護百姓與調停戰事聞名，眾人推舉你承擔更大的責任。',source:'https://zh.wikipedia.org/wiki/金庸作品',book:'江湖原創支線',effect:{support:8}},
+ {id:'盟約',title:'群俠共主',story:'群豪推舉你主持各派盟約，仍須逐年處理門派利益與地方民生。',source:'https://zh.wikipedia.org/wiki/金庸作品',book:'江湖原創支線',effect:{legitimacy:4,support:4}}
+]);
+
+const jyTextMap=[
+ ['此架空官署依明代錦衣衛職級融合設計，掌巡察、宿衛與案件覆核；三國史實並無此制。','御前司與各門派密堂的職級為本作跨書卷架空設定。'],['明代錦衣衛官署層級','宮廷御前侍衛與門派密堂職級'],['明代錦衣衛職級','御前侍衛與門派密堂職級'],['三國史實並無此制','各書設定未曾並列此制'],['《三國演義》','金庸武俠小說'],['三國演義','金庸武俠小說'],['三國志','金庸作品'],['《後漢書》','金庸作品'],['後漢書','金庸作品'],['浮生三國','浮生江湖'],['三國','江湖'],['漢末','南宋至清初'],['漢室','朝廷'],['漢廷','朝廷'],['黃巾之亂','明教舉事'],['黃巾軍','義軍'],['孝廉／明經','門派舉薦'],['九品中正','武林評議'],['九品官人制','武林九等品評'],['察舉','門派舉薦'],['明經','武學與經義'],['曹操／曹魏','金國王府'],['劉備／蜀漢','襄陽義軍'],['孫氏／東吳','蒙古汗廷'],['袁紹／河北','明教'],['袁術／淮南','日月神教'],['劉表／荊州','華山派'],['曹操','金國王府'],['劉備','郭靖'],['孫權','張無忌'],['袁紹','張三丰'],['劉表','岳不群'],['諸葛亮','黃蓉'],['關羽','喬峰'],['張飛','郭靖'],['孫權胞妹','江湖女俠'],['蜀漢','襄陽義軍'],['曹魏','金國王府'],['東吳','蒙古汗廷'],['起義','結盟舉事'],['揭竿起義','結盟舉事'],['攻佔城池','爭奪據點'],['攻城','爭奪地界'],['州刺史轄區','江湖地界'],['州郡城圖','武林地界'],['州郡','江湖地界'],['州區','江湖地界'],['城池','據點'],['帝王本紀','盟主傳記'],['皇帝','朝廷君主'],['稱帝','掌領天下盟'],['登基帝位','掌領天下盟'],['皇后','盟主夫人'],['太子','繼承人'],['後宮','內廷'],['下詔','發出盟主令'],['朕','本盟主'],['錦衣局','御前司'],['錦衣衛','御前侍衛'],['明制架空','武俠架空'],['明代','清初或架空朝代'],['太守','地界主事'],['刺史','地方守將'],['將軍','俠士統領'],['文臣','謀士'],['武將','俠客'],['宦官','內廷近侍'],['內廷宦官','宮廷近侍'],['駙馬','皇親伴侶'],['天下是英雄的','江湖有群俠'],['亂世','江湖風雲'],['演義','小說'],['三國時期','金庸小說各時代'],['《三國志》卷','金庸作品中的人物傳記']
+];
+function jyText(value){let out=String(value??'');for(const [a,b] of jyTextMap)out=out.split(a).join(b);return out;}
+const jyOldDecision=window.decision;window.decision=function(title,text,options){jyOldDecision(jyText(title),jyText(text),(options||[]).map(o=>({...o,label:jyText(o.label),hint:jyText(o.hint),result:jyText(o.result),failure:jyText(o.failure)})));};
+const jyOldLog=window.log;window.log=function(text,tag,year){jyOldLog(jyText(text),jyText(tag),year);};
+const jyOldModal=window.modal;window.modal=function(html){const attrs=[];let safe=String(html).replace(/(?:href|src)="[^"]*"/g,x=>{attrs.push(x);return `__JY_ATTR_${attrs.length-1}__`});safe=jyText(safe);safe=safe.replace(/__JY_ATTR_(\d+)__/g,(_,i)=>attrs[+i]);jyOldModal(safe);};
+window.routePicker=function(){if(!s||s.age<13||s.pending||s.done||s.routeMode)return false;decision('十三歲 · 選擇江湖門路','十二歲以前，你以孩童身分生活，接受家人、鄉里、師門與江湖風雲的影響。年滿十三歲後，才選擇此生的六條主要門路。',Object.entries(PLAYER_ROUTE_META).filter(([id])=>id!=='eunuch'||s.sex==='男').map(([id,[name,desc]])=>({label:name,hint:desc,selectRoute:id,result:'你選擇以「'+name+'」行走江湖。'})));return true;};
+window.encounter=function(){migrate();const candidates=eligiblePeople();if(!candidates.length){travelOpportunity();return}const p=pick(candidates);s.lastEncounter=s.year;const old=friendship(p.name),success=Math.min(.92,.4+(p.kind==='warrior'?s.force:s.wit)/200+s.bond/400);let opts=[{label:old?'再敘舊誼':'上前結識',hint:'結交同道 · 人緣 +3 · '+(p.kind==='warrior'?'武藝':'才學')+' +4',effect:{bond:3,[p.kind==='warrior'?'force':'wit']:4},relation:{name:p.name,value:18},meet:p.name,result:'你與'+p.name+(old?'重逢，談起往事與眼前江湖。':'交換姓名，從此不再只是聽聞其名。')},{label:p.kind==='warrior'?'以武藝求教':'談論江湖見聞',hint:'成功率 '+Math.round(success*100)+'% · 成則關係 +28、聲望 +5；未成仍可互勉',chance:success,effect:{fame:5},relation:{name:p.name,value:28},failRelation:{name:p.name,value:5},meet:p.name,result:p.name+'認可你的心志，約定來日再會。',failure:'你的見識尚淺，'+p.name+'仍勉勵你繼續磨礪。'},{label:'拱手道別',hint:'人緣 +2',effect:{bond:2},result:'你拱手告辭。江湖廣闊，不必強求同行。'}];if(p.kind==='lord')opts.splice(1,0,{label:'接受招攬，加入'+campName(p.camp),hint:'成功率 '+Math.round(success*100)+'% · 成則加入門派、義軍或朝廷陣營',chance:success,effect:{fame:8,money:8},relation:{name:p.name,value:25},meet:p.name,set:{faction:campName(p.camp),role:s.force>s.wit?'門下校尉':'幕府參議',rank:1,location:p.region},failRelation:{name:p.name,value:6},result:p.name+'邀你留在其麾下。你從此加入'+campName(p.camp)+'，承擔新的責任。',failure:'此番尚未獲正式接納，但你已留下姓名。'});decision('江湖偶遇 · '+p.name,p.trait+'（人物與作品脈絡供改編參照；本次相遇和後續均為原創支線。）',opts);};
+window.officeLibrary=function(){pause();const rows=OFFICE_DATA.offices;modal('<h2>門派、江湖與朝廷職分</h2><p>此資料庫保留原有搜尋與階級欄位，改列金庸武俠世界常見門派職分、江湖身份與宮廷職務。不同小說的角色未必同時代；本遊戲將各書人物編入可選的架空江湖。</p><label>搜尋職分<input id="office-search" placeholder="例如：掌門、長老、御前侍衛"></label><label>類別<select id="office-category"><option value="">所有類別</option>'+[...new Set(rows.map(o=>o.category))].map(v=>'<option>'+v+'</option>').join('')+'</select></label><div id="office-results"></div>');const refresh=()=>{const q=$('office-search').value.trim(),c=$('office-category').value,rs=rows.filter(o=>o.name.includes(q)&&(!c||o.category===c));$('office-results').innerHTML='<p>共 '+rs.length+' 項</p>'+rs.map(o=>'<article class="peer"><strong>'+o.name+'</strong> · '+o.category+'<small>遊戲 '+o.tier+' 階 · '+(o.playable?'可任職':'名望／特殊身份')+'</small><p>'+o.evidence.context+'</p></article>').join('')};$('office-search').oninput=refresh;$('office-category').onchange=refresh;refresh();};
+window.sovereignLibrary=function(){modal('<h2>盟主與江湖權力故事</h2><p>本路線借用金庸小說中門派興衰、盟主推舉、朝廷與江湖交涉等題材，所有人物關係、盟約、任免及戰局皆為玩家主導的原創支線。各部小說原本分屬不同時代，本遊戲採群俠並世的架空編年。</p><p>你可以延攬群豪、治理據點、談判、結盟、冊立繼承人或解散勢力；稱號、盟約與後果都會記入本局浮生錄。</p>');};
+window.geographyLibrary=function(){if(!s){modal('<h2>武林地界圖</h2><p>請先開始人生。地圖以江湖地界、名山門派、城鎮與商路組成，地名來自金庸作品意象並經遊戲改編；歸屬和守備均為架空玩法。</p>');return}polityMigrate();const reachable=new Set(frontierCities().map(c=>c.id));modal('<h2>武林地界圖</h2><p>保留既有地圖、攻防與據點資料結構，將州郡城池呈現改為江湖地界、門派名山與行旅節點。攻防歸屬為架空世界設定。</p><label>篩選地界<select id="geo-province"><option value="">全部地界</option>'+PROVINCES.map(p=>'<option>'+p.name+'</option>').join('')+'</select></label><label>篩選勢力<select id="geo-status"><option value="">全部據點</option><option value="owned">我方據點</option><option value="reachable">可爭取據點</option></select></label><div id="geo-results"></div>');const refresh=()=>{const p=$('geo-province').value,status=$('geo-status').value,rows=CITIES.filter(c=>(!p||c.province===p)&&(!status||(status==='owned'?cityOwner(c)==='player':reachable.has(c.id))));$('geo-results').innerHTML='<p>共 '+rows.length+' 個據點 · 江湖紀年 '+s.year+'</p>'+rows.map(c=>'<article class="city-card '+(cityOwner(c)==='player'?'owned':'')+'"><strong>'+cityName(c)+(s.revolt?.capital===c.id?' · 根據地':'')+'</strong><small>'+c.province+' · '+c.county+'<br>'+WORLD_FACTIONS[cityOwner(c)]+' · 守備 '+c.defense+(reachable.has(c.id)?' · 可爭取':'')+'</small><p>'+c.note+'</p></article>').join('')};$('geo-province').onchange=refresh;$('geo-status').onchange=refresh;refresh();};
+window.eligiblePeople=function(){return PEOPLE.filter(p=>s.year>=p.from&&s.year<=p.to&&!s.slain.includes(p.name)&&(s.service||s.royalRoute?p.camp===routeCamp():true));};
+const jyOffices=$('offices');if(jyOffices)jyOffices.onclick=()=>officeLibrary();const jyGeoButton=$('geography');if(jyGeoButton)jyGeoButton.onclick=()=>geographyLibrary();const jyDynastyButton=$('dynasty-library');if(jyDynastyButton)jyDynastyButton.onclick=()=>modal('<h2>江湖人物與故事脈絡</h2><p>遊戲融合六部金庸武俠小說的時代氛圍與人物題材，並以原創事件呈現。每個故事抉擇都會依玩家所選勢力、角色存活、聲望與門派關係改變。</p><p>《天龍八部》取北宋多族群江湖，《射鵰英雄傳》《神鵰俠侶》取南宋與襄陽風雲，《倚天屠龍記》取元末明教與六大派，《笑傲江湖》取五嶽劍派門戶紛爭，《鹿鼎記》取清初宮廷與江湖往來。跨書相遇為本遊戲架空安排。</p>');const jyPowerButton=document.querySelector('#sovereign-library');if(jyPowerButton)jyPowerButton.onclick=()=>sovereignLibrary();
+
+
+function jyStatic(){
+ document.title='浮生江湖 · 金庸武俠人生';document.documentElement.lang='zh-Hant';
+ const set=(id,value)=>{const e=$(id);if(e)e.textContent=value};
+ set('geography','武林地界');set('offices','門派與職分');set('selection-library','門派舉薦');set('nine-library','武林評議');set('palace-library','御前職分');set('frontier-library','邊地商路');set('sovereign-library','盟主故事');set('kinship-library','皇親門第');set('household-guide','家門制度');set('dynasty-library','人物與江湖典故');set('route-action',s?.routeMode?'門路：'+(PLAYER_ROUTE_META[s.routeMode]?.[0]||s.routeMode):'選擇江湖門路');set('jinyi-action',s?.jinyi?'御前司 · '+(s.jinyi.office||'設置'):'御前司');
+ const brand=document.querySelector('.brand');if(brand)brand.innerHTML='<b>俠</b> 浮生江湖 <small>一人一卷，俠路浮生</small>';
+ const h=document.querySelector('.intro h1');if(h)h.innerHTML='江湖有英雄。<br><em>這一生，是你的。</em>';
+ const p=document.querySelector('.intro p');if(p)p.innerHTML='你不一定是名門大俠。<br>也許出身鄉野，也許自幼行商、從軍或習武。<br>在恩怨交錯的江湖，走出屬於自己的路。';
+ const seal=document.querySelector('.seal');if(seal)seal.innerHTML='命由天定<br>俠路己行';const poem=document.querySelector('.poem');if(poem)poem.innerHTML='快意恩仇<br>一劍江湖夢';const boat=document.querySelector('.boat');if(boat)boat.textContent='⚔';const label=document.querySelector('.land-label');if(label)label.textContent='江湖 · 群山圖';
+ const title=document.querySelector('#setup .section-title h2');if(title)title.textContent='江湖之中，你將生於何處？';const desc=document.querySelector('#setup .section-title p');if(desc)desc.textContent='出身家世隨機分配：農民、貧民、商人、軍人或世家大族。門派、義軍、朝廷與商路等人生路線依原有流程展開。';
+ document.querySelectorAll('#sovereign-library').forEach(e=>e.textContent='盟主故事');
+ const focus=$('focus');if(focus){for(const [value,label] of [['wit','研讀武學 · 參詳招式'],['money','行商營生 · 積攢旅資'],['bond','結交同道 · 聽聞江湖']]){const option=focus.querySelector('option[value="'+value+'"]');if(option)option.textContent=label;}}
+ const era=$('era');if(era)era.innerHTML=JY_BOOKS.map(b=>'<option value="'+b.year+'">'+b.title+' · '+b.year+'年（'+b.place+'）</option>').join('');const birth=$('birth');if(birth)birth.innerHTML='抽取命籤，開始這一生 <span>→</span>';const note=document.querySelector('#setup .note');if(note)note.textContent='六卷江湖年代 · 隨機家世 · 人生抉擇 · 群俠相逢 · 一生回顧';
+ const footer=document.querySelector('footer');if(footer)footer.innerHTML='<span>浮生江湖 <i>·</i> 每個無名之輩，都有自己的一生。</span><small>金庸武俠小說題材改編 · 原創人生模擬</small>';
+ const readModal=(title,body)=>modal('<h2>'+title+'</h2>'+body);
+ $('about').onclick=()=>readModal('關於這一卷江湖人生','<p>保留原有出生、家世、六條門路、年度選擇、偶遇人物、家門、組織經營與續世架構。內容改編為金庸武俠小說題材，可選六種故事年代，遇見各書人物並參與重新創作的江湖支線。</p><p>《天龍八部》《射鵰英雄傳》《神鵰俠侶》《倚天屠龍記》《笑傲江湖》《鹿鼎記》原本分屬不同時代；本作採「群俠並世」架空編年。人物對話與事件重新撰寫，不照錄小說段落。</p><p><a href="https://www.ylib.com/activity/catalogue_sales/2022catalogue.pdf" target="_blank" rel="noopener">遠流《金庸作品集》書目 ↗</a></p><p>存檔仍保存在此瀏覽器；原有資料欄位保留。</p>');
+ $('offices').onclick=()=>officeLibrary();$('geography').onclick=()=>geographyLibrary();
+ $('selection-library').onclick=()=>readModal('門派舉薦與武林評議','<p>門派依師門聲望、武學修習、行俠紀錄與同道推薦考量人才；本遊戲保留原有資格和考課流程，改以江湖門路呈現。</p>');
+ $('nine-library').onclick=()=>readModal('武林九等品評','<p>九等是本局門派評議的遊戲分級，用於影響任職、推薦與升遷機會，不代表人物品格。</p>');
+ $('palace-library').onclick=()=>readModal('御前職分','<p>此路線改為宮廷近侍、御前侍衛與傳令職務，內容是跨書卷的架空安排。</p>');
+ $('frontier-library').onclick=()=>readModal('邊地與商路','<p>北地關隘、草原商道、西域驛站與沿海航線提供出使、互市、護送與結盟故事。</p>');
+ $('kinship-library').onclick=()=>readModal('皇親與門第','<p>保留婚配、家門與續世機制；皇親關係改以金庸小說中朝廷、王府與江湖人物往來為題材。</p>');
+ $('dynasty-library').onclick=()=>readModal('江湖人物與故事脈絡','<p>六部作品分取北宋、南宋、元末、明與清初背景，跨書相遇屬架空編年。每段支線依玩家勢力、人物存活、聲望與門派關係改變。</p>');
+ const power=document.querySelector('#sovereign-library');if(power)power.onclick=()=>sovereignLibrary();
+}
+const jyTextNodes=root=>{if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);for(const node of nodes){const next=jyText(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;}};
+ const jyOldRender=window.render;window.render=function(){jyOldRender();jyStatic();if(s&&!s.done)$('year').textContent='江湖紀年 '+s.year;const connectionTitle=$('connections')?.querySelector('h3');if(connectionTitle)connectionTitle.textContent='群俠相逢';const profileNote=$('profile-notes');if(profileNote)profileNote.textContent='幼年成長抉擇與能力保留；六歲後今年重心生效。成年後可在行旅、門派與宴席結識各路群俠。';jyTextNodes(document.body);};
+jyStatic();
 </script></body></html>
